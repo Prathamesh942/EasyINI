@@ -19,7 +19,7 @@ class Editor:
         self.root.geometry("1200x800")
 
         #Set theme and styling
-        self.setup_styling()
+        # self.setup_styling()
 
         #Data storage
         self.config_data = self.load_config()
@@ -376,6 +376,7 @@ class Editor:
 
         try:
             config = configparser.ConfigParser()
+            config.optionxform = str
             config.read(file_config["path"], encoding='utf-8-sig')
 
             # ── Main container
@@ -751,21 +752,22 @@ class Editor:
             input_frame.pack(fill=tk.X)
             
             # Value input
-            if domain:
-                # Dropdown for predefined values
-                values = [v.strip() for v in domain.split(",")]
-                value_var = tk.StringVar(value=current_value)
-                value_combo = ttk.Combobox(input_frame, 
-                                         textvariable=value_var, 
-                                         values=values, 
-                                         state="readonly",
-                                         font=('Arial', 9), width=40)
-                value_combo.pack(fill=tk.X, pady=2, expand=True)
-                
-                # Bind for live preview
-                value_combo.bind("<<ComboboxSelected>>", lambda e, var=value_var, s=section, o=option: self.update_live_preview(var, s, o))
-            
-            # Store reference for saving
+            if domain and not (section == "DECODE" and option.upper() == "CALIBRATION"): 
+                # Dropdown for predefined values 
+                values = [v.strip() for v in domain.split(",")] 
+                value_var = tk.StringVar(value=current_value) 
+                value_combo = ttk.Combobox(input_frame, textvariable=value_var, values=values, state="readonly", font=('Arial', 9), width=40) 
+                value_combo.pack(fill=tk.X, pady=2, expand=True) 
+                # Bind for live preview 
+                value_combo.bind("<<ComboboxSelected>>", lambda e, var=value_var, s=section, o=option: self.update_live_preview(var, s, o)) 
+            else: 
+                # Textbox (for DECODE.CALIBRATION or when no domain is provided) 
+                value_var = tk.StringVar(value=current_value) 
+                value_entry = tk.Entry(input_frame, textvariable=value_var, font=('Arial', 9), width=40) 
+                value_entry.pack(fill=tk.X, pady=2, expand=True) 
+                # Bind for live preview on text change 
+                value_entry.bind("<KeyRelease>", lambda e, var=value_var, s=section, o=option: self.update_live_preview(var, s, o))
+                # Store reference for saving
             field_frame.field_data = {
                 "section": section,
                 "option": option,
@@ -896,7 +898,7 @@ def launch_exe(exe_name):
 
 def main():
     root = tk.Tk()
-    # sv_ttk.set_theme("dark") 
+    sv_ttk.set_theme("dark") 
     app = Editor(root)
     root.mainloop()
 
