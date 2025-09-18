@@ -19,7 +19,7 @@ class Editor:
         self.root.geometry("1200x800")
 
         #Set theme and styling
-        # self.setup_styling()
+        self.setup_styling()
 
         #Data storage
         self.config_data = self.load_config()
@@ -38,23 +38,66 @@ class Editor:
         self.refresh_file_list()
 
     def setup_styling(self):
-        sv_ttk.set_theme("dark")
         style = ttk.Style()
+        style.theme_use("clam")  # clam allows full custom styling
 
-        # Header
-        style.configure("Header.TFrame", padding=5)
-        style.configure("Header.TLabel", font=("Arial", 10, "bold"))
-        
-        # Card look
-        style.configure("Card.TFrame", padding=10, relief="solid", borderwidth=1)
-        
-        # Labels
-        style.configure("Bold.TLabel", font=("Arial", 10, "bold"))
-        
-        # Buttons
-        style.configure("Action.TButton", font=("Arial", 9, "bold"), padding=6, background="#4CAF50", foreground="white")
-        style.configure("Danger.TButton", font=("Arial", 9, "bold"), padding=6, background="#4CAF50", foreground="white")
-        
+        # --- Core Colors (only 2 total) ---
+        BASE = "#1a1a1a"      # Dark background
+        ACCENT = "#4CAF50"    # Accent (Green)
+
+        # --- Frames (3D look with relief) ---
+        style.configure("Header.TFrame", background=BASE, padding=5, relief="raised", borderwidth=2)
+        style.configure("Card.TFrame", background=BASE, relief="groove", borderwidth=2, padding=10)
+
+        # --- Labels ---
+        style.configure("Header.TLabel", font=("Segoe UI", 11, "bold"), background=BASE, foreground=ACCENT)
+        style.configure("Bold.TLabel", font=("Segoe UI", 10, "bold"), background=BASE, foreground=ACCENT)
+        style.configure("TLabel", background=BASE, foreground=ACCENT)
+
+        # --- Buttons (3D, green accent) ---
+        style.configure(
+            "TButton",
+            font=("Segoe UI", 9, "bold"),
+            padding=6,
+            relief="raised",
+            background=ACCENT,
+            foreground=BASE,
+            borderwidth=2
+        )
+        style.map(
+            "TButton",
+            background=[("active", "#45a049"), ("pressed", "#2e7d32")],
+            relief=[("pressed", "sunken")],
+            foreground=[("disabled", "#555555")]
+        )
+
+        # --- Treeview (Dark + 3D) ---
+        style.configure(
+            "Treeview",
+            background=BASE,
+            foreground=ACCENT,
+            fieldbackground=BASE,
+            bordercolor=ACCENT,
+            borderwidth=1,
+            relief="groove",
+            rowheight=25
+        )
+        style.configure("Treeview.Heading", background=ACCENT, foreground=BASE, relief="raised", borderwidth=1)
+        style.map("Treeview", background=[("selected", ACCENT)], foreground=[("selected", BASE)])
+
+        # --- Scrollbar (Dark + Minimal 3D) ---
+        style.configure(
+            "Vertical.TScrollbar",
+            gripcount=0,
+            background=BASE,
+            darkcolor=ACCENT,
+            lightcolor=BASE,
+            troughcolor=BASE,
+            bordercolor=ACCENT,
+            arrowcolor=ACCENT,
+            relief="sunken"
+        )
+
     def create_config_page(self):
         """Create the configuration page"""
         self.config_frame = ttk.Frame(self.notebook)
@@ -333,7 +376,7 @@ class Editor:
 
         try:
             config = configparser.ConfigParser()
-            config.read(file_config["path"])
+            config.read(file_config["path"], encoding='utf-8-sig')
 
             # ── Main container
             main_frame = ttk.Frame(dialog, padding=15)
@@ -596,7 +639,6 @@ class Editor:
         status_bar.pack(fill=tk.X, pady=(4, 0))
         self.preview_status = tk.Label(status_bar, text="Changes are saved automatically", anchor='w', fg="#e4e4e4")
         self.preview_status.pack(fill=tk.X)
-
     
     def on_file_selected(self, event):
         """Handle file selection in editor"""
@@ -649,7 +691,9 @@ class Editor:
         try:
             self.current_file = file_config
             config = configparser.ConfigParser()
-            config.read(file_config["path"])
+            # Preserve original key case
+            config.optionxform = str
+            config.read(file_config["path"], encoding="utf-8-sig")
             
             # Store current data
             self.current_ini_data = config
@@ -852,7 +896,7 @@ def launch_exe(exe_name):
 
 def main():
     root = tk.Tk()
-    sv_ttk.set_theme("dark") 
+    # sv_ttk.set_theme("dark") 
     app = Editor(root)
     root.mainloop()
 

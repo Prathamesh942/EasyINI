@@ -8,7 +8,14 @@
     {
       "name": "station.ini",
       "path": "C:/Users/91766/OneDrive/Desktop/station.ini",
-      "fields": []
+      "fields": [
+        {
+          "section": "DECODE",
+          "option": "PLANT",
+          "domain": "TVS, RVS",
+          "display": "DECODE.PLANT"
+        }
+      ]
     }
   ]
 }
