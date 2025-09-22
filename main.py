@@ -1,13 +1,9 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext, simpledialog
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import configparser
 import json
 import os
-from typing import Dict, List, Any
-import threading
-import time
 import sv_ttk
-from tktooltip import ToolTip
 import subprocess
 
 
@@ -224,14 +220,11 @@ class Editor:
 
     def check_config_password(self):
         """Check password for configuration access"""
-        if self.config_unlocked:
-            return True
             
         password = simpledialog.askstring("Configuration Access", 
                                         "Enter password to access configuration:", 
                                         show='*')
         if password == "admin123":  # Hardcoded password
-            self.config_unlocked = True
             return True
         else:
             messagebox.showerror("Access Denied", "Incorrect password!")
