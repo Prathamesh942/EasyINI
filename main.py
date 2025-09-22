@@ -208,7 +208,7 @@ class Editor:
     
         edit_btn = ttk.Button(
             file_buttons_frame,
-            text="Edit Fields",
+            text="Edit",
             command=self.edit_fields,
             style="Action.TButton"
         )
@@ -383,12 +383,22 @@ class Editor:
             main_frame = ttk.Frame(dialog, padding=15)
             main_frame.pack(fill=tk.BOTH, expand=True)
 
-            # ── Instructions
-            ttk.Label(
-                main_frame,
-                text="Configure fields to be edited",
-                style="Subtext.TLabel"
-            ).pack(pady=(0, 10))
+
+            # ── File path editor
+            path_editor = ttk.Frame(main_frame)
+            path_editor.pack(fill=tk.X, pady=(0, 10))
+
+            ttk.Label(path_editor, text="File Path:", style="Bold.TLabel").pack(side=tk.LEFT)
+            path_var = tk.StringVar(value=file_config.get("path", ""))
+            path_entry = ttk.Entry(path_editor, textvariable=path_var)
+            path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8)
+
+            def _browse_new_path():
+                new_path = filedialog.askopenfilename(title="Select INI File", filetypes=[("INI files", "*.ini"), ("All files", "*.*")])
+                if new_path:
+                    path_var.set(new_path)
+
+            ttk.Button(path_editor, text="Browse", command=_browse_new_path, style="TButton").pack(side=tk.LEFT)
 
             # ── Fields card
             fields_card = ttk.Frame(main_frame)
@@ -441,16 +451,16 @@ class Editor:
 
             ttk.Button(
                 buttons_frame,
-                text="Add Field",
+                text="Edit",
                 command=lambda: self.add_field_row(self.scrollable_fields_frame),
-                style="Action.TButton"
+                style="TButton"
             ).pack(side=tk.LEFT, padx=5)
 
             ttk.Button(
                 buttons_frame,
-                text="Save Fields",
-                command=lambda: self.save_fields(dialog, file_config),
-                style="Action.TButton"
+                text="Save",
+                command=lambda: self.save_fields(dialog, file_config, path_var),
+                style="TButton"
             ).pack(side=tk.LEFT, padx=5)
 
             # Load existing fields
@@ -535,8 +545,8 @@ class Editor:
         """Remove a field row"""
         row_frame.destroy()
     
-    def save_fields(self, dialog, file_config):
-       """Save fields configuration"""
+    def save_fields(self, dialog, file_config, path_var=None):
+       """Save fields configuration and file path"""
        fields = []
     
        # Collect all field rows
@@ -556,6 +566,11 @@ class Editor:
     
        # Update file config
        file_config["fields"] = fields
+       # Update path if provided
+       if path_var is not None:
+           new_path = path_var.get().strip()
+           if new_path:
+               file_config["path"] = new_path
        self.save_config()
        self.refresh_file_list()
     
@@ -564,6 +579,12 @@ class Editor:
            "Success",
            f"Saved {len(fields)} fields for '{file_config['name']}'"
        )
+       # Reload if currently selected
+       try:
+           if self.current_file and isinstance(self.current_file, dict) and self.current_file.get("name") == file_config.get("name"):
+               self.load_ini_file(file_config)
+       except Exception:
+           pass
 
     def create_editor_page(self):
         """Create the editor page with themed ttk widgets"""
