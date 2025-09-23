@@ -1,28 +1,14 @@
 {
   "files": [
     {
-      "name": "station.ini",
-      "path": "C:/Users/91766/OneDrive/Desktop/station.ini",
-      "fields": [
-        {
-          "section": "DECODE",
-          "option": "PLANT",
-          "domain": "TVS, RVS",
-          "display": "DECODE.PLANT"
-        }
-      ]
-    },
-    {
       "name": "PLANT.INI",
       "path": "C:/Users/91766/OneDrive/Desktop/PLANT.INI",
-      "fields": [
-        {
-          "section": "DECODE",
-          "option": "CALIBRATION",
-          "domain": "",
-          "display": "DECODE.CALIBRATION"
-        }
-      ]
+      "fields": []
+    },
+    {
+      "name": "station.ini",
+      "path": "C:/Users/91766/OneDrive/Desktop/New/station.ini",
+      "fields": []
     }
   ]
 }

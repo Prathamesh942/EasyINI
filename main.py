@@ -2,11 +2,10 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, simpledialog
 import configparser
 import json
-import os
+import os, sys
 import sv_ttk
 import subprocess
-
-
+import logging
 
 class Editor:
     def __init__(self, root):
@@ -327,19 +326,54 @@ class Editor:
             self.show_fields_dialog(file_config)
 
     def load_config(self):
-        """Load configuration from JSON file"""
-        try:
-            if os.path.exists('editor_config.json'):
-                with open('editor_config.json', 'r') as f:
+        """Load configuration from JSON in user AppData; create/migrate as needed."""
+        config_path = self._get_user_config_path()
+
+        # Default config
+        default_config = {"files": []}
+
+        # Try loading from AppData
+        if os.path.exists(config_path):
+            try:
+                with open(config_path, 'r') as f:
                     return json.load(f)
-        except:
-            pass
-        return {"files": []}
+            except Exception as e:
+                print(f"Error loading config from AppData: {e} → using defaults")
+
+        # Migrate default from alongside the exe if present
+        bundled_path = resource_path("editor_config.json")
+        try:
+            if os.path.exists(bundled_path):
+                with open(bundled_path, 'r') as f:
+                    data = json.load(f)
+                os.makedirs(os.path.dirname(config_path), exist_ok=True)
+                with open(config_path, 'w') as f:
+                    json.dump(data, f, indent=2)
+                return data
+        except Exception as e:
+            print(f"Error migrating bundled config: {e}")
+
+        # Create new default in AppData
+        try:
+            os.makedirs(os.path.dirname(config_path), exist_ok=True)
+            with open(config_path, 'w') as f:
+                json.dump(default_config, f, indent=2)
+        except Exception as e:
+            print(f"Error creating config in AppData: {e}")
+        return default_config
 
     def save_config(self):
-        """Save configuration to JSON file"""
-        with open('editor_config.json', 'w') as f:
+        """Save configuration to JSON file in user AppData."""
+        config_path = self._get_user_config_path()
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, 'w') as f:
             json.dump(self.config_data, f, indent=2)
+
+    def _get_user_config_path(self):
+        """Return a user-writable config path under %APPDATA%/EasyINI/editor_config.json"""
+        base = os.environ.get('APPDATA') or os.path.join(os.path.expanduser('~'), 'AppData', 'Roaming')
+        app_dir = os.path.join(base, 'EasyINI')
+        return os.path.join(app_dir, 'editor_config.json')
 
     def refresh_file_list(self):
         """Refresh the files list in config page"""
@@ -444,7 +478,7 @@ class Editor:
 
             ttk.Button(
                 buttons_frame,
-                text="Edit",
+                text="Add fields",
                 command=lambda: self.add_field_row(self.scrollable_fields_frame),
                 style="TButton"
             ).pack(side=tk.LEFT, padx=5)
@@ -670,6 +704,9 @@ class Editor:
         
         if file_config:
             self.load_ini_file(file_config)
+        else:
+            messagebox.showwarning(f"File not found at location, {file_config}")
+            return
 
     def save_changes(self):
         """Save changes to INI file"""
@@ -688,8 +725,12 @@ class Editor:
                     if section in self.current_ini_data:
                         self.current_ini_data[section][option] = new_value
             
-            # Write to file
-            with open(self.current_file["path"], 'w') as f:
+            # Write to INI file at actual selected path (not alongside exe)
+            ini_path = self.current_file["path"]
+            if not os.path.exists(ini_path):
+                messagebox.showwarning("Warning", f"File not found at {ini_path}. Changes were not saved.")
+                return
+            with open(ini_path, 'w') as f:
                 self.current_ini_data.write(f)
             
             # Refresh preview
@@ -699,6 +740,7 @@ class Editor:
             messagebox.showinfo("Success", "Changes saved successfully")
             
         except Exception as e:
+            # logging.info(f"Could not save file: {str(e)}")
             messagebox.showerror("Error", f"Could not save file: {str(e)}")
 
     def load_ini_file(self, file_config):
@@ -708,7 +750,12 @@ class Editor:
             config = configparser.ConfigParser()
             # Preserve original key case
             config.optionxform = str
-            config.read(file_config["path"], encoding="utf-8-sig")
+            ini_path = file_config.get("path", "")
+            if not os.path.exists(ini_path):
+                self.current_ini_data = None
+                messagebox.showwarning("Warning", f"File not found at {ini_path}")
+                return
+            config.read(ini_path, encoding="utf-8-sig")
             
             # Store current data
             self.current_ini_data = config
@@ -808,8 +855,15 @@ class Editor:
 
             # Persist immediately for durability
             if self.current_file and 'path' in self.current_file:
-                with open(self.current_file['path'], 'w') as f:
-                    self.current_ini_data.write(f)
+                ini_path = self.current_file['path']
+                if os.path.exists(ini_path):
+                    with open(ini_path, 'w') as f:
+                        self.current_ini_data.write(f)
+                else:
+                    messagebox.showwarning("Warning", f"File not found at {ini_path}. Changes were not saved.")
+                    # Avoid flipping status to green when not saved
+                    self.preview_status.config(text="File not found; changes not saved", fg="#ff4d4d")
+                    self.root.after(2000, lambda: self.preview_status.config(text="Changes are saved automatically", fg='#e4e4e4'))
             
             # Update status
             self.preview_status.config(text="File saved", fg="#1fff23")
@@ -909,6 +963,17 @@ def launch_exe(exe_name):
         subprocess.Popen([exe_path], shell=False)
     except Exception as e:
         print(f"Error launching {exe_name}: {e}")
+
+def resource_path(filename):
+    """Get absolute path to resource (works for dev and for PyInstaller exe)"""
+    if hasattr(sys, '_MEIPASS'):
+        # When running as PyInstaller bundle
+        base_path = sys._MEIPASS
+    else:
+        # When running from source or installed exe
+        base_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+    return os.path.join(base_path, filename)
+
 
 def main():
     root = tk.Tk()
